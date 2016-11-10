@@ -1,0 +1,2 @@
+* Implementation of GaussianKernel in Rcpp
+* Implementation of ExponentialKernel in Rcpp

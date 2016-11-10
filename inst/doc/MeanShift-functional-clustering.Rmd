@@ -1,0 +1,308 @@
+---
+title: "Vignette 2 - Clustering Functional Data via the Mean Shift Algorithm"
+author: "Mattia Ciollaro & Daren Wang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+bibliography: MyBibliography.bib
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+We recommend reading the MeanShift vignette _Vignette 1 - Clustering via the Mean Shift Algorithm_, `vignette( "MeanShift-clustering" )`, before reading this vignette on clustering for functional data. The previous vignette contains a description of the mean shift algorithm and its use for clustering via the `MeanShift` package. This vignette assumes some familiarity with the mean shift algorithm and the `msClustering` and `bmsClustering` functions of the `MeanShift` package.
+
+## Functional data
+In Functional Data Analysis (FDA) [@ramsay2005functional; @ferraty2006nonparametric; @ferraty2011oxford; @horvath2012inference], we think of curves and other functions as the fundamental unit of measurement.
+
+Clustering is an important problem in FDA because it is often of critical interest to identify subpopulations based on the shapes of the measured curves.
+
+## Clustering functional data with the mean shift algorithm
+Mode-based clustering, in constrast to many commonly-used clustering methods (e.g. $k$-means) has a population formulation [@chacon2015population].
+
+@ciollaroclustering show that the population framework of nonparametric mode-based clustering can be extended to the functional setting, despite the fact that function spaces generally lack Lebesgue measure and proper probability densities cannot be easily defined.
+
+From a practical perspective, it is interesting to extend the mean-shift algorithm and use it to cluster functional data. The `MeanShift` package provides a way to use the mean shift algorithm functions `msClustering` and `bmsClustering` with functional data by means of the function `projectCurveWavelets`.
+
+Given a sample of (possibly noisy) curves $\{X_1(t_{1,j}),X_2(t_{2,j}),\dots,X_n(t_{n,j})\}$ observed on a discrete grid $\{t_{i,j}\}_{j=1}^{m_i}$, the procedure is as follows:
+
+1. each curve in the sample is projected onto a $L^2$ wavelet basis using the DWT (Discrete Wavelet Transform), see @nason2010wavelet
+
+2. the wavelet coefficients of each curve are thresholded and yield a compressed and sparse representation of each functional datum; the coefficients are arranged by column on a matrix `X`
+
+3. the mean shift algorithm is applied on `X` with by means of the function `msClustering` or `bmsClustering`; cluster labels and modal coefficients are identified
+
+4. the modal curves/cluster representatives are reconstructed from the modal wavelet coefficients by means of the inverse DWT.
+
+Steps 1, 2, and 4 above are handled with the function `projectCurveWavelets`.
+
+## Example: clustering signatures data
+We illustrate the above procedure by means of an application to a subset of data taken from the Signature Verification Competition (<http://www.cse.ust.hk/svc2004/>). See also @yeung2004svc2004 and @geenenssignatures.
+
+The dataset that we consider contains 5 different types of signatures. For each of these 5 signatures, we observe 20 replications performed by the signature's owner on a digital tablet^[The dataset that we present is obtained by removing the forged signatures from the "Sample Data" dataset available at <http://www.cse.ust.hk/svc2004/download.html>.].
+
+For each signature, we observe 7 functional variables:
+
+- x-coordinate: the x coordinate of the pen on the pad
+- y-coordinate: the y coordinate of the pen on the pad
+- time-stamp: a time stamp
+- button status: 0 -> pen is up, 1 -> pen is touching the tablet
+- azimuth: clockwise rotation of the cursor about the z-axis
+- altitude: angle upward towards the positive z-axis
+- pressure: adjusted state of the normal pressure.
+
+```{r, results="hide", message=FALSE}
+## load "MeanShift" package
+library( MeanShift )
+```
+```{r}
+## load the signatures dataset
+load( "signatures.RData" )
+ls()
+```
+
+```{r}
+## create true signature labels
+signatures.labels <- rep( 1:5, rep( 20, 5 ) )
+```
+
+Let's take a look at some signatures.
+
+```{r, fig.align="center", fig.width=7, fig.height=4}
+## plot some signatures
+plot( x.list[[1]], y.list[[1]], type="o", pch=16, main="Type 1 signature", xlab="x", ylab="y" )
+
+plot( x.list[[21]], y.list[[21]], type="o", pch=16, main="Type 2 signature", xlab="x", ylab="y" )
+
+plot( x.list[[41]], y.list[[41]], type="o", pch=16, main="Type 3 signature", xlab="x", ylab="y" )
+
+plot( x.list[[61]], y.list[[61]], type="o", pch=16, main="Type 4 signature", xlab="x", ylab="y" )
+
+plot( x.list[[81]], y.list[[81]], type="o", pch=16, main="Type 5 signature", xlab="x", ylab="y" )
+```
+
+Because the number of time-stamps varies across the signatures (though the time-stamps are equispaced for each signature) and the DWT requires that the length of the discretization grid is a positive power of 2, we "jiggle" a little bit the observed curves. In particular, when the discretization grid varies across the curves or its length is not a positive power of 2, `projectCurveWavelets` "equibalances" all the curves by linearly interpolating them on a common grid whose length is a positive power of 2. For details, see pages 143-150 of @nason2010wavelet, pages 33-34 of @ferraty2006nonparametric, and `?projectCurvesWavelets`.
+
+```{r}
+## max grid length across all the signatures
+max.grid.length <- max( sapply( t.list, length ) )
+print( max.grid.length )
+
+## we will extend the length of the grid to closest power of 2
+grid.length <- 512
+```
+
+The time-stamps in `t.list` are already standardized between 0 and 1. Before proceding, let us standardize the x coordinates and the y coordinates as well.
+
+```{r}
+## standardize x and y coordinates
+standardize <- function( x ){
+	range <- range( x )
+	output <- ( x - range[1] ) / diff( range )
+	return( output )
+}
+x.list <- lapply( x.list, standardize )
+y.list <- lapply( y.list, standardize )
+```
+
+In the next step, we use the function `projectCurveWavelets` to obtain a wavelet representation of the 7 functional variables for each signature. The functional data in the signatures dataset are very smooth. Furthermore, the process of equibalancing the curves on a grid of 512 points introduces a linear interpolation (which is a form of smoothing) as we explained above. For these reasons, we limit the thresholding of the wavelets to the highest level coefficients only by specifying `level=8` in the call to `projectCurveWavelets`.
+
+```{r}
+## project curves on wavelet basis
+wave.x <- mapply( projectCurveWavelets, x=t.list, y=x.list, 
+MoreArgs=list( grid.length=grid.length, levels=8 ), SIMPLIFY=FALSE )
+
+wave.y <- mapply( projectCurveWavelets, x=t.list, y=y.list, 
+MoreArgs=list( grid.length=grid.length, levels=8 ), SIMPLIFY=FALSE )
+
+wave.button <- mapply( projectCurveWavelets, x=t.list, y=button.list,
+MoreArgs=list( grid.length=grid.length, levels=8 ), SIMPLIFY=FALSE )
+
+wave.azimuth <- mapply( projectCurveWavelets, x=t.list, y=azimuth.list,
+MoreArgs=list( grid.length=grid.length, levels=8 ), SIMPLIFY=FALSE )
+
+wave.altitude <- mapply( projectCurveWavelets, x=t.list, y=altitude.list,
+MoreArgs=list( grid.length=grid.length, levels=8 ), SIMPLIFY=FALSE )
+
+wave.pressure <- mapply( projectCurveWavelets, x=t.list, y=pressure.list,
+MoreArgs=list( grid.length=grid.length, filter.number=4, levels=8 ), SIMPLIFY=FALSE )
+```
+
+We now proceed to write a function to extract the wavelet coefficients from the above objects.
+
+```{r}
+## wavelet coefficients
+extractCoefficients <- function( x ){
+	output <- sapply( x , "[[", "coefficients" )
+	return( output )
+}
+```
+
+Next, we combine all the wavelet coefficients of the 6 features of a signature into a single long vector and we stack these vectors into a matrix.
+
+```{r}
+## combine wavelet objects into a unique list
+wave.list <- list( wave.x, wave.y, wave.button, wave.azimuth, wave.altitude,
+wave.pressure )
+
+## get coefficients list
+wave.coefficients <- lapply( wave.list, extractCoefficients )
+
+## combine coefficients into a unique matrix
+wave.coefficients <- do.call( rbind, wave.coefficients )
+
+## 3066 wavelet coefficients: ( 512 - 1 ) * 6 for each one of the 100 signatures
+dim( wave.coefficients )
+
+## note that the matrix is sparse
+## print the proportion of non-zero wavelet coefficient for each curve
+round( apply( wave.coefficients, 2, function( x ){ mean( x != 0 ) } ), 2 )
+
+## on average only about 53% of the wavelet coefficients are non-zero
+```
+
+We can now perform clustering using the mean shift algorithm!
+
+```{r, message=FALSE}
+## bandwidth candidates
+h.cand <- quantile( dist( t( wave.coefficients ) ), seq( 0.03, 0.15, by=0.01 ) )
+
+## clustering using the blurring mean shift algorithm
+system.time( clustering <- lapply( h.cand, 
+function( h ){ bmsClustering( wave.coefficients, h=h ) } ) )
+```
+
+Let's inspect the clustering of the wavelet coefficients for different bandwidths. The following line of code produces tables with cluster labels and number of signatures associated to each label.
+
+```{r}
+lapply( lapply( lapply( clustering, "[[", "labels" ), table ), sort, decreasing=TRUE )
+```
+
+There appears to be a "persistent" collection of 5-6 clusters across the clustering structures that we obtained along the increasing sequence of bandwidths.
+
+Let us examine in more detail the clustering structure associated with the fourth largest bandwidth.
+
+```{r}
+index <- 4
+
+## compare cluster labels and true labels
+cluster1 <- which( clustering[[index]]$labels == 3 ) # USER2 21:40
+print( cluster1 )
+print( signatures.labels[cluster1] )
+
+cluster2 <- which( clustering[[index]]$labels == 1 ) # USER1 1:20
+print( cluster2 )
+print( signatures.labels[cluster2] )
+
+cluster3 <- which( clustering[[index]]$labels == 6 ) # USER3 40:60
+print( cluster3 )
+print( signatures.labels[cluster3] )
+
+cluster4 <- which( clustering[[index]]$labels == 18 ) # USER5 80:100
+print( cluster4 )
+print( signatures.labels[cluster4] )
+
+cluster5 <- which( clustering[[index]]$labels == 10 ) # USER4 60:80
+print( cluster5 )
+print( signatures.labels[cluster5] )
+```
+
+Finally, we reconstruct the modal signatures from the modal wavelet coefficients.
+
+```{r, fig.align="center", fig.width=7, fig.height=4}
+## modal coefficients for interesting clusters
+## (each column corresponds to a feature)
+mode1.coeffs <- matrix( clustering[[index]]$components[,3], nrow=511 )
+mode2.coeffs <- matrix( clustering[[index]]$components[,1], nrow=511 )
+mode3.coeffs <- matrix( clustering[[index]]$components[,6], nrow=511 )
+mode4.coeffs <- matrix( clustering[[index]]$components[,18], nrow=511 )
+mode5.coeffs <- matrix( clustering[[index]]$components[,10], nrow=511 )
+
+## put in a list
+modal.coeffs <- list( mode1.coeffs, mode2.coeffs, mode3.coeffs, mode4.coeffs,
+mode5.coeffs )
+
+## we need "wd" objects on which to apply the inverse DWT:
+## we can extract the wd object from the wave.xxx lists!
+wd.x.object <- wave.x[[1]]$y.wdT
+wd.y.object <- wave.y[[1]]$y.wdT
+
+## we used all of the 6 features for clustering, but
+## for visualization we only care about the projection
+## of the functional modes on the x-y plane!
+##
+## wd.button.object <- wave.button[[1]]$y.wdT
+## wd.azimuth.object <- wave.azimuth[[1]]$y.wdT
+## wd.altitude.object <- wave.altitude[[1]]$y.wdT
+## wd.pressure.object <- wave.pressure[[1]]$y.wdT
+
+## function for inverse DWT
+invDWT <- function( wd.object, modal.coefficients ){
+	wd.object$D <- modal.coefficients
+	output <- wr( wd.object )
+	return( output )
+}
+
+modes.x <- vector( mode="list", length=5 )
+modes.y <- vector( mode="list", length=5 )
+for( i in 1:5 ){
+  
+  modes.x[[i]] <- invDWT( wd.x.object, modal.coeffs[[i]][,1] )
+  modes.y[[i]] <- invDWT( wd.y.object, modal.coeffs[[i]][,2] )
+  
+}
+
+## cluster 1
+plot( NULL, main="Cluster 1", xlab="x", ylab="y", xlim=c( 0, 1 ),
+ylim=c( -0.1, 1.1 ) )
+for( i in cluster1 ){
+	
+	points( x.list[[i]], y.list[[i]], type="o", pch=16, cex=0.5, lwd=0.5 )
+	
+}
+lines( modes.x[[1]], modes.y[[1]], col=2, lwd=4 )
+
+## cluster 2
+plot( NULL, main="Cluster 2", xlab="x", ylab="y", xlim=c( 0, 1 ),
+ylim=c( 0, 1 ) )
+for( i in cluster2 ){
+	
+	points( x.list[[i]], y.list[[i]], type="o", pch=16, cex=0.5, lwd=0.5 )
+	
+}
+lines( modes.x[[2]], modes.y[[2]], col=2, lwd=4 )
+
+## cluster 3
+plot( NULL, main="Cluster 3", xlab="x", ylab="y", xlim=c( -0.1, 1 ),
+ylim=c( -0.4, 1 ) )
+for( i in cluster3 ){
+	
+	points( x.list[[i]], y.list[[i]], type="o", pch=16, cex=0.5, lwd=0.5 )
+	
+}
+lines( modes.x[[3]], modes.y[[3]], col=2, lwd=4 )
+
+## cluster 4
+plot( NULL, main="Cluster 4", xlab="x", ylab="y", xlim=c( -0.1, 1 ),
+ylim=c( -0.2, 1 ) )
+for( i in cluster4 ){
+	
+	points( x.list[[i]], y.list[[i]], type="o", pch=16, cex=0.5, lwd=0.5 )
+	
+}
+lines( modes.x[[4]], modes.y[[4]], col=2, lwd=4 )
+
+## cluster 5
+plot( NULL, main="Cluster 5", xlab="x", ylab="y", xlim=c( -0.1, 1.1 ),
+ylim=c( -0.1, 1 ) )
+for( i in cluster5 ){
+	
+	points( x.list[[i]], y.list[[i]], type="o", pch=16, cex=0.5, lwd=0.5 )
+	
+}
+lines( modes.x[[5]], modes.y[[5]], col=2, lwd=4 )
+```
+
+Let's pretend for a moment that we didn't know that the signatures dataset contains in fact 5 different types of signatures (in a typical clustering problem, the clusters are unknown!). Well, our experiment suggests that by applying the mean shift clustering procedure implemented in the `MeanShift` package we would have been able to learn the 5 different types of signatures!
+
+By looking at the plots above, it may look surprising at first that the red curves (the modal signatures which are representative of each cluster) are not "centered" in their respective clusters. This shouldn't be surprising, however. In fact, we performed the mean shift clustering on a 6-dimensional multivariate functional random variable (think a vector whose every entry contains a curve; in our case, the entries were x-coordinate, y-coordinate, button status, azimuth, altitude, and pressure) and then "projected" each 6-dimensional functional mode on a 2-dimensional space to graph the clusters of signatures. While the modes are "centered" in the 6-dimensional space with respect to the 6-dimensional functional representations of the signatures, their projections are not necessarily centered with respect to the projections of the signatures in the 2-dimentional space in which we graphed them!

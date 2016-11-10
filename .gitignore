@@ -1,0 +1,7 @@
+*.tar.gz
+*.txt
+*.Rproj
+man
+*.Rcheck
+src/*.o
+src/*.so
