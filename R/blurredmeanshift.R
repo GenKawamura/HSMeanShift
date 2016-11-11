@@ -43,7 +43,7 @@ kernel="epanechnikovKernel", tol.stop=1e-6, max.iter=100, legacy.mode=FALSE){
 
 	} else {
           ## Rcpp implementation of blurringMeanShiftAlgorithm. This method is much faster than ordinary R code.
-          ## output <- RcppBlurringMeanShiftAlgorithm( X, h, kernel, tol.stop, max.iter )
+          output <- RcppBlurringMeanShiftAlgorithm( X, h, kernel, tol.stop, max.iter )
           not.converged <- output[["not_converged"]]
           new.X <- output[["new_x"]]
         }
