@@ -3,7 +3,7 @@ Title: Clustering via the Mean Shift Algorithm
 Version: 1.2.0
 Date: 2016-11-02
 Author: Mattia Ciollaro, Daren Wang and Gen Kawamura
-Maintainer: Mattia Ciollaro <mattiaciollaro@gmail.com>
+Maintainer: Mattia Ciollaro <mattiaciollaro@gmail.com> and Gen Kawamura <gen.kawamura@cern.ch>
 Depends: Rcpp, RcppArmadillo, parallel, wavethresh
 Description: Clustering of vector data and functional data using the mean shift
     algorithm (multi-core processing is supported) or its blurring version.

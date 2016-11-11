@@ -21,6 +21,14 @@ RcppDistanceFunction <- function(x, y) {
     .Call('MeanShift_RcppDistanceFunction', PACKAGE = 'MeanShift', x, y)
 }
 
+RcppBlurringMeanShiftOperator <- function(x, h, kernel) {
+    .Call('MeanShift_RcppBlurringMeanShiftOperator', PACKAGE = 'MeanShift', x, h, kernel)
+}
+
+RcppBlurringMeanShiftAlgorithm <- function(x, h, kernel, tol_stop, max_iter) {
+    .Call('MeanShift_RcppBlurringMeanShiftAlgorithm', PACKAGE = 'MeanShift', x, h, kernel, tol_stop, max_iter)
+}
+
 RcppMeanShiftOperator <- function(x, points, h, kernel) {
     .Call('MeanShift_RcppMeanShiftOperator', PACKAGE = 'MeanShift', x, points, h, kernel)
 }

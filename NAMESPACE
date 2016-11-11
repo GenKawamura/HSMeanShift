@@ -2,4 +2,5 @@
 
 export(bmsClustering)
 export(msClustering)
+export(projectCurveWavelets)
 useDynLib(MeanShift)

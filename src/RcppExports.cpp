@@ -62,6 +62,34 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// RcppBlurringMeanShiftOperator
+NumericMatrix RcppBlurringMeanShiftOperator(const NumericMatrix& x, double h, String kernel);
+RcppExport SEXP MeanShift_RcppBlurringMeanShiftOperator(SEXP xSEXP, SEXP hSEXP, SEXP kernelSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type h(hSEXP);
+    Rcpp::traits::input_parameter< String >::type kernel(kernelSEXP);
+    rcpp_result_gen = Rcpp::wrap(RcppBlurringMeanShiftOperator(x, h, kernel));
+    return rcpp_result_gen;
+END_RCPP
+}
+// RcppBlurringMeanShiftAlgorithm
+List RcppBlurringMeanShiftAlgorithm(const NumericMatrix& x, double h, String kernel, double tol_stop, int max_iter);
+RcppExport SEXP MeanShift_RcppBlurringMeanShiftAlgorithm(SEXP xSEXP, SEXP hSEXP, SEXP kernelSEXP, SEXP tol_stopSEXP, SEXP max_iterSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type h(hSEXP);
+    Rcpp::traits::input_parameter< String >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type tol_stop(tol_stopSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    rcpp_result_gen = Rcpp::wrap(RcppBlurringMeanShiftAlgorithm(x, h, kernel, tol_stop, max_iter));
+    return rcpp_result_gen;
+END_RCPP
+}
 // RcppMeanShiftOperator
 NumericVector RcppMeanShiftOperator(NumericVector x, const NumericMatrix& points, double h, String kernel);
 RcppExport SEXP MeanShift_RcppMeanShiftOperator(SEXP xSEXP, SEXP pointsSEXP, SEXP hSEXP, SEXP kernelSEXP) {

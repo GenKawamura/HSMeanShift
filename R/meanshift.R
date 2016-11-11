@@ -32,8 +32,8 @@ tol.stop=1e-6 , legacy.mode=FALSE){
   }
 }
 
-###
 
+###
 meanShiftAlgorithmAll <- function( X, h=NULL, kernel="epanechnikovKernel",
 tol.stop=1e-6, multi.core=FALSE , legacy.mode=FALSE){
 	
@@ -85,18 +85,51 @@ tol.stop=1e-6, multi.core=FALSE , legacy.mode=FALSE){
 
 #' Function to perform clustering using the mean shift algorithm.
 #'
+#'
 #' This function implements the mean shift algorithm. The algorithm locates the modes of a kernel density estimator and associates each data point to exactly one of the modes, thus effectively clustering the data.
+#'
+#'
+#' It is generally recommended to standardize \code{X} so that each variable has unit variance prior to running the algorithm on the data.
+#'
+#' Roughly speaking, larger values of \code{h} produce a coarser clustering (i.e. few and large clusters). For sufficiently large values of \code{h}, the algorithm produces a unique cluster containing all the data points. Smaller values of \code{h} produce a finer clustering (i.e. many small clusters). For sufficiently small values of \code{h}, each cluster that is identified by the algorithm will contain exactly one data point.
+#'
+#' If \code{h} is not specified in the function call, then \code{h} is by default set to the 30th percentile of the empirical distribution of distances between the columns of \code{X}, i.e. \code{h=quantile( dist( t( X ) ), 0.3 )}.
+#'
+#' In their implementation, \code{gaussianKernel} and \code{exponentialKernel} are rescaled to assign probability of at least 0.99 to the unit interval \eqn{[0,1]}. This ensures that all the kernels are roughly on the same scale.
+#' 
+#' To specify the number of cores when \code{multi.core=TRUE}, the option
+#' \code{mc.cores} needs to be set with \code{options( mc.cores=n.cores )}, where \code{n.cores} is the number of cores that the mean shift algorithm is allowed to use for parallel computation.
+#'
+#'
+#' @param X a \eqn{p \times n} matrix containing \eqn{n \ge 1} \eqn{p}-dimensional numeric vectors stored as columns. Each column of \code{X} represents a sample point.
+#' @param h a strictly positive bandwidth parameter.
+#' @param kernel a kernel function (as a character string). The following kernels are supported:
+#' \itemize{
+#'  \item Epanechnikov: \eqn{ K(x) = \frac{3}{2}(1-x^2)I <- {[0,1]}(x) }; \code{kernel="epanechnikovKernel"}
+#'  \item cubic: \eqn{ K(x) = 4(1-x)^3I <- {[0,1]}(x) }; \code{kernel="cubicKernel"}
+#'  \item Gaussian: \eqn{ K(x) = \sqrt{\frac{2}{\pi}}e^{-\frac{x^2}{2}}I <- {[0,\infty)}(x) }; \code{kernel="gaussianKernel"}
+#'  \item exponential \eqn{ K(x) = e^{-x}I <- {[0,\infty)}(x) }; \code{kernel="exponentialKernel"}.
+#' }
+#' @param tol.stop a strictly positive tolerance parameter. The algorithm stops when all of the updates generate steps of length smaller than \code{tol.stop}. \code{tol.stop} should be considerably smaller than \code{tol.epsilon}.
+#' @param tol.epsilon a strictly positive tolerance parameter. Points that are less than \code{tol.epsilon}- separated are grouped in the same cluster once the algorithm stops.
+#' @param multi.core logical. If \code{TRUE}, the mean shift algorithm is parallelized.
+#' @param legacy.mode default is \code{FALSE}. If \code{TRUE}, legacy kernel codes written in R are used. The legacy R implementation is much slower.
+#'
+#'
+#' @return The function invisibly returns a list with names
+#' \item{components}{a matrix containing the modes/cluster representatives by column.}
+#' \item{labels}{an integer vector of cluster labels.}
+#'
+#'
+#' @example examples/example-msClustering.R
+#'
+#' @author Mattia Ciollaro, Daren Wang and Gen Kawamura
+#' @references Carreira-Perpinan, M. A. (2015) \emph{A review of mean-shift algorithms for clustering}. arXiv \url{http://arxiv.org/abs/1503.00687}
+#' @seealso \code{\link{bmsClustering}}
 #'
 #' @useDynLib MeanShift
 #' @export
-#' @param X
-#' @param h
-#' @param kernel
-#' @param tol.stop
-#' @param tol.epsilon
-#' @param multi.core
-#' @param rcpp.mode
-#' @return
+#'
 msClustering <- function( X, h=NULL, kernel="epanechnikovKernel",
 tol.stop=1e-6, tol.epsilon=1e-3, multi.core=FALSE , legacy.mode=FALSE){
 	

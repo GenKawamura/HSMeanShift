@@ -3,7 +3,6 @@
 using namespace arma;
 using namespace Rcpp;
 
-RNGScope scope;
 
 double computeGaussianKernel(double y) {
   double value = 0;
