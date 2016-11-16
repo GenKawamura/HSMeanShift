@@ -31,7 +31,7 @@ double computeExponentialKernel(double y) {
   double value = 0;
   if (0 <= y){
     // value <- dexp( y, rate=4.61 )
-    value = R::dexp(y, 4.61, false);
+    value = R::dexp(y, (double) 1 / 4.61, false);
   }
   return value;
 }

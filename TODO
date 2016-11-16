@@ -1,4 +1,2 @@
-* Consistent documentation
 * Implementation of bmsClustering in Rcpp 
-* Implementation of GaussianKernel in Rcpp
 * Implementation of ExponentialKernel in Rcpp
