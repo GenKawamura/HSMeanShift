@@ -9,7 +9,9 @@ double computeGaussianKernel(double y) {
 
   if (0 <= y){
     //value = (double) 2 / 0.388 * dnorm( y / 0.388 );
-    value = (double) 2 / 0.388;
+    NumericVector k(1);
+    k = R::dnorm( y / 0.388, 0, 1, false);
+    value = (double) 2 / 0.388 * k[0];
   }
   return value;
 }
@@ -28,6 +30,7 @@ NumericVector RcppGaussianKernel(NumericVector x){
 double computeExponentialKernel(double y) {
   double value = 0;
   if (0 <= y){
+    // value <- dexp( y, rate=4.61 )
     value = R::dexp(y, 4.61, false);
   }
   return value;
