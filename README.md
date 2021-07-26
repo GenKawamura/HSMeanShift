@@ -1,4 +1,4 @@
-# MeanShift
+# High-Speed MeanShift
 R package to perform clustering of vector data and functional data using the mean shift algorithm.
 
 ### version 1.2.0
